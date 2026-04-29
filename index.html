@@ -165,7 +165,6 @@
                     // ⚠️ यहाँ अपनी VAPID Key डालें (Firebase Cloud Messaging settings से)
                     getToken(messaging, { vapidKey: 'BFCJKzvh6YZ_hTsEZh4MWEz_wNFJou2J1JJDWhpNqlR_RaIifKxUaw6AwbVdefOAk2n_LtuofYmAkLll6-JBmfs' }).then((currentToken) => {
 
-console.log (currentTocken);
                         if (currentToken) {
                             // टोकन मिलने पर उसे Apps Script को भेजकर सब्सक्राइब करें
                             fetch(API_URL, {
