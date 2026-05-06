@@ -159,61 +159,70 @@
 
 
     </style>
-    <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+      <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyC8csXaXQiGrlwg1vdKqm4CRBcsCcOFgiY",
-        authDomain: "baithkeenews.firebaseapp.com",
-        projectId: "baithkeenews",
-        storageBucket: "baithkeenews.firebasestorage.app",
-        messagingSenderId: "1051043299858",
-        appId: "1:1051043299858:web:1b2c6b4aac4aaca4254ecb"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8csXaXQiGrlwg1vdKqm4CRBcsCcOFgiY",
+            authDomain: "baithkeenews.firebaseapp.com",
+            projectId: "baithkeenews",
+            storageBucket: "baithkeenews.firebasestorage.app",
+            messagingSenderId: "1051043299858",
+            appId: "1:1051043299858:web:1b2c6b4aac4aaca4254ecb"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+        const API_URL = "आपका_नया_APPS_SCRIPT_URL";
 
-    // --- LIVE PERMISSION GUARD ---
-    async function guardSystem() {
-        const overlay = document.getElementById("permissionOverlay");
-        const news = document.getElementById("newsContainer");
+        // --- सख्त गेटकीपर फंक्शन ---
+        async function enforcePermission() {
+            const overlay = document.getElementById("permissionOverlay");
+            const mainContainer = document.getElementById("mainContentContainer"); // अपनी मुख्य डिव का ID यहाँ लिखें
 
-        if (Notification.permission !== "granted") {
-            overlay.style.display = "flex";
-            if(news) news.style.display = "none";
-        } else {
-            overlay.style.display = "none";
-            if(news) news.style.display = "block";
-            // अगर सब ठीक है तो टोकन लो
-            checkAndSubscribe();
-        }
-    }
-
-    // हर 2 सेकंड में चेक करेगा (ताकि मैन्युअल बंद करने पर भी पकड़ में आये)
-    setInterval(guardSystem, 2000); 
-
-    window.enableAndStart = async () => {
-        const res = await Notification.requestPermission();
-        if (res === "granted") {
-            location.reload();
-        } else {
-            alert("चेतावनी: बिना अनुमति के न्यूज़ नहीं खुलेगी!");
-        }
-    };
-
-    async function checkAndSubscribe() {
-        try {
-            const token = await getToken(messaging, { 
-                vapidKey: 'BKpR6IrHvCQKmmrP2J1q6VoU4v0tsTfVMzY7DUMi7WYA1mpquBwpxCnOU5-X5EFuhdRrSQx-3lTZxLlrTkKj8Kc' 
-            });
-            if (token) {
-                fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "subscribe", token: token }) });
+            if (Notification.permission !== "granted") {
+                overlay.style.display = "flex";
+                if(mainContainer) mainContainer.style.visibility = "hidden";
+            } else {
+                overlay.style.display = "none";
+                if(mainContainer) mainContainer.style.visibility = "visible";
+                registerToken();
             }
-        } catch (e) { console.error(e); }
-    }
-</script>
+        }
+
+        // हर 1 सेकंड में चेक करेगा (लाइव प्रोटेक्शन)
+        setInterval(enforcePermission, 1000);
+
+        window.requestSitePermission = async () => {
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") location.reload();
+        };
+
+        async function registerToken() {
+            try {
+                const token = await getToken(messaging, { vapidKey: 'BKpR6IrHvCQKmmrP2J1q6VoU4v0tsTfVMzY7DUMi7WYA1mpquBwpxCnOU5-X5EFuhdRrSQx-3lTZxLlrTkKj8Kc' });
+                if (token) fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "subscribe", token: token }) });
+            } catch (err) { console.error("Token Error", err); }
+        }
+
+        // --- पुराना PWA (App Install) बैनर कोड ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('installBanner');
+            if(installBtn) installBtn.style.display = 'block';
+        });
+
+        window.installApp = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+            }
+        };
+    </script>
 
 
 
