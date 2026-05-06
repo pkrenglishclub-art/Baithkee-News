@@ -161,53 +161,76 @@
     </style>
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
-        // ⚠️ यहाँ Firebase Project से निकालकर अपना config डालें
-        const firebaseConfig = {
-    apiKey: "AIzaSyAwpf0IEd0wl6mvJ6EV5XB3XQYoLwmWXZQ",
-    authDomain: "baithkee-news.firebaseapp.com",
-    projectId: "baithkee-news",
-    storageBucket: "baithkee-news.firebasestorage.app",
-    messagingSenderId: "274990392562",
-    appId: "1:274990392562:web:25c3b84d13fc84cdfbdc6b"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyC8csXaXQiGrlwg1vdKqm4CRBcsCcOFgiY",
+        authDomain: "baithkeenews.firebaseapp.com",
+        projectId: "baithkeenews",
+        storageBucket: "baithkeenews.firebasestorage.app",
+        messagingSenderId: "1051043299858",
+        appId: "1:1051043299858:web:1b2c6b4aac4aaca4254ecb"
+    };
 
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
-        const app = initializeApp(firebaseConfig);
-        const messaging = getMessaging(app);
+    // 1. Mandatory Gatekeeper
+    window.onload = async () => {
+        if (Notification.permission !== "granted") {
+            document.getElementById("permissionOverlay").style.display = "flex";
+            document.getElementById("newsContainer").style.display = "none";
+        } else {
+            document.getElementById("permissionOverlay").style.display = "none";
+            document.getElementById("newsContainer").style.display = "block";
+            setupFCM();
+            if (typeof fetchNews === "function") fetchNews(); // आपका पुराना न्यूज़ लोड फंक्शन
+        }
+    };
 
-        // ग्लोबल फंक्शन ताकि लॉगिन होने पर परमिशन माँगी जा सके
-        window.requestNotificationPermission = function() {
-            Notification.requestPermission().then((permission) => {
-                if (permission === 'granted') {
-                    // ⚠️ यहाँ अपनी VAPID Key डालें (Firebase Cloud Messaging settings से)
-                    getToken(messaging, { vapidKey: 'BO-rPlH96Q3AFKzlXKeqK72ApLc95QrwwlhCUP-jLMf3Q9jbYxJsq3yjvyp2o_s7OhbptuRl0YPu0B3Gk-BtRy0' }).then((currentToken) => {
+    window.enableAndStart = async () => {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+            location.reload(); 
+        } else {
+            alert("न्यूज़ देखने के लिए नोटिफिकेशन परमिशन ज़रूरी है!");
+        }
+    };
 
-                        if (currentToken) {
-                            // टोकन मिलने पर उसे Apps Script को भेजकर सब्सक्राइब करें
-                            fetch(API_URL, {
-                                method: 'POST',
-                                body: JSON.stringify({ action: "subscribe", token: currentToken })
-                            });
-                        }
-                    });
-                }
+    async function setupFCM() {
+        try {
+            const token = await getToken(messaging, { 
+                vapidKey: 'BKpR6IrHvCQKmmrP2J1q6VoU4v0tsTfVMzY7DUMi7WYA1mpquBwpxCnOU5-X5EFuhdRrSQx-3lTZxLlrTkKj8Kc' 
             });
-        };
+            if (token) {
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "subscribe", token: token })
+                });
+            }
+        } catch (err) { console.log("Token Error:", err); }
+    }
 
-        // जब यूज़र ऐप इस्तेमाल कर रहा हो तब मैसेज आए
-        onMessage(messaging, (payload) => {
-            let toast = document.getElementById("toastMsg");
-            toast.innerText = "🔔 " + payload.notification.title;
-            toast.classList.add("show");
-            setTimeout(() => toast.classList.remove("show"), 4000);
-        });
-    </script>
-</head>
+    // 2. Add To Home Screen (App Download) Logic
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // अगर आपके पास कोई इनस्टॉल बटन है तो उसे यहाँ शो करें
+        const installBtn = document.getElementById('installBanner');
+        if(installBtn) installBtn.style.display = 'block';
+    });
 
-<body oncontextmenu="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') return false;" onkeydown="return disableKeys(event);">
+    window.installApp = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        }
+    };
+</script>
+
 
 
 
