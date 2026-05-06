@@ -159,7 +159,6 @@
 
 
     </style>
-    
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
@@ -176,71 +175,46 @@
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
-    // 1. Mandatory Gatekeeper
-    window.onload = async () => {
+    // --- LIVE PERMISSION GUARD ---
+    async function guardSystem() {
+        const overlay = document.getElementById("permissionOverlay");
+        const news = document.getElementById("newsContainer");
+
         if (Notification.permission !== "granted") {
-            document.getElementById("permissionOverlay").style.display = "flex";
-            document.getElementById("newsContainer").style.display = "none";
+            overlay.style.display = "flex";
+            if(news) news.style.display = "none";
         } else {
-            document.getElementById("permissionOverlay").style.display = "none";
-            document.getElementById("newsContainer").style.display = "block";
-            setupFCM();
-            if (typeof fetchNews === "function") fetchNews(); // आपका पुराना न्यूज़ लोड फंक्शन
+            overlay.style.display = "none";
+            if(news) news.style.display = "block";
+            // अगर सब ठीक है तो टोकन लो
+            checkAndSubscribe();
         }
-    };
+    }
+
+    // हर 2 सेकंड में चेक करेगा (ताकि मैन्युअल बंद करने पर भी पकड़ में आये)
+    setInterval(guardSystem, 2000); 
 
     window.enableAndStart = async () => {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-            location.reload(); 
+        const res = await Notification.requestPermission();
+        if (res === "granted") {
+            location.reload();
         } else {
-            alert("न्यूज़ देखने के लिए नोटिफिकेशन परमिशन ज़रूरी है!");
+            alert("चेतावनी: बिना अनुमति के न्यूज़ नहीं खुलेगी!");
         }
     };
 
-    async function setupFCM() {
+    async function checkAndSubscribe() {
         try {
             const token = await getToken(messaging, { 
                 vapidKey: 'BKpR6IrHvCQKmmrP2J1q6VoU4v0tsTfVMzY7DUMi7WYA1mpquBwpxCnOU5-X5EFuhdRrSQx-3lTZxLlrTkKj8Kc' 
             });
             if (token) {
-                fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: "subscribe", token: token })
-                });
+                fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "subscribe", token: token }) });
             }
-        } catch (err) { console.log("Token Error:", err); }
+        } catch (e) { console.error(e); }
     }
-
-    // 2. Add To Home Screen (App Download) Logic
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        // अगर आपके पास कोई इनस्टॉल बटन है तो उसे यहाँ शो करें
-        const installBtn = document.getElementById('installBanner');
-        if(installBtn) installBtn.style.display = 'block';
-    });
-
-    window.installApp = async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-        }
-    };
 </script>
 
-
-
-
-
-<div id="permissionOverlay">
-    <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgxZYThJov7nVLeejJp30nZ130Js5tuIKOicgFSzAT8BV-sWAhDWy2oWKX5uzTY9BpRefSvN-leUHeaIvcTPDYCX7G2qjChtibiJapDQ1IzCTVekLffx7d-jZopQRENCRh-12BzEHwC4azCmX1mcavCBGCfa8Yf3Rhv0XxucZ6IwppXX1m_flG5YV1X8ig/s1600/20260412_015639_0000.png" width="100">
-    <h2>खबरें देखने के लिए अनुमति दें</h2>
-    <p>बिना नोटिफिकेशन अनुमति के आप लोकल खबरें नहीं पढ़ पाएंगे।</p>
-    <button class="mandatory-btn" onclick="enableAndStart()">✅ Allow Notification</button>
-</div>
 
 
     <header>
